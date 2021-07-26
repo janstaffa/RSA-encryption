@@ -1,0 +1,30 @@
+{
+  "name": "RSA-encryption",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/janstaffa/RSA-encryption.git",
+  "author": "Jan Šfaffa <agenttupesy@gmail.com>",
+  "license": "MIT",
+  "scripts": {
+    "watch": "tsc -w",
+    "test": "jest"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "transform": {
+      "node_modules/variables/.+\\.(j|t)sx?$": "ts-jest"
+    },
+    "transformIgnorePatterns": [
+      "node_modules/(?!variables/.*)"
+    ]
+  },
+  "dependencies": {
+    "typescript": "^4.3.5"
+  },
+  "devDependencies": {
+    "@types/jest": "^26.0.24",
+    "jest": "^27.0.6",
+    "ts-jest": "^27.0.4"
+  }
+}

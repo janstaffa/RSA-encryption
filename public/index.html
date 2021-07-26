@@ -1,0 +1,67 @@
+<html lang="en">
+
+<head>
+   <meta charset="UTF-8">
+   <meta http-equiv="X-UA-Compatible" content="IE=edge">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>RSA encryption</title>
+   <link rel="stylesheet" href="./styles.css" />
+   <script src="../dist/index.js" defer="true" type="module"></script>
+</head>
+
+<body>
+   <div class="main">
+      <h1>RSA encryption</h1>
+      <hr>
+      <div class="text-center text">
+         <b>Your private key:</b> <span id="private-key-display">asdsadsadsadsadsada</span>
+      </div>
+      <div class="text-center text">
+         <b>Your public key:</b> <span id="public-key-display">asdsadsadsadsdsadada</span>
+      </div>
+      <hr>
+      <div class="wraper">
+         <div class="side">
+            <div class="inner-wrapper">
+               <h3>Encrypt:</h3>
+               <div class="form-group">
+                  <label for="message">Message:</label>
+                  <textarea name="message" id="input-message" rows="8"></textarea>
+               </div>
+               <div class="form-group">
+                  <label for="friends-public-key">Your friends public key:</label>
+                  <input type="text" name="friends-public-key" id="input-friend-public-key" />
+               </div>
+               <div class="center">
+                  <button>encrypt</button>
+               </div>
+               <div class="form-group">
+                  <label for="encrypted-message">Encrypted message:</label>
+                  <textarea name="encrypted-message" id="output-encrypted-message" rows="8" readonly></textarea>
+               </div>
+            </div>
+         </div>
+         <div class="side">
+            <div class="inner-wrapper">
+               <h3>Decrypt:</h3>
+               <div class="form-group">
+                  <label for="message">Encrypted message:</label>
+                  <textarea name="message" id="input-decrypted-message" rows="8"></textarea>
+               </div>
+               <div class="center">
+                  <button>decrypt</button>
+               </div>
+               <div class="form-group">
+                  <label for="encrypted-message">Decrypted message:</label>
+                  <textarea name="encrypted-message" id="output-decrypted-message" rows="8" readonly></textarea>
+               </div>
+            </div>
+         </div>
+      </div>
+
+   </div>
+
+
+</body>
+
+</html>
