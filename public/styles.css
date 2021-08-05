@@ -44,6 +44,7 @@ h1 {
 
 .inner-wrapper {
    width: 300px;
+   max-width: 300px;
 }
 
 .form-group {
@@ -88,4 +89,14 @@ button {
 
 .text-center {
    text-align: center;
+}
+
+.inline {
+   width: 100%;
+   display: flex;
+   justify-content: space-between;
+}
+
+.inline input {
+   width: 48%;
 }

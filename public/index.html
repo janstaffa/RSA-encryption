@@ -14,10 +14,11 @@
       <h1>RSA encryption</h1>
       <hr>
       <div class="text-center text">
-         <b>Your private key:</b> <span id="private-key-display">asdsadsadsadsadsada</span>
+         <b>Your private key:</b> <span id="private-key-display"></span>
       </div>
       <div class="text-center text">
-         <b>Your public key:</b> <span id="public-key-display">asdsadsadsadsdsadada</span>
+         <b>Your public key(key, exponent):</b> (<span id="public-key-display_n"></span>, <span
+            id="public-key-display_e"></span>)
       </div>
       <hr>
       <div class="wraper">
@@ -29,11 +30,15 @@
                   <textarea name="message" id="input-message" rows="8"></textarea>
                </div>
                <div class="form-group">
-                  <label for="friends-public-key">Your friends public key:</label>
-                  <input type="text" name="friends-public-key" id="input-friend-public-key" />
+                  <label for="friends-public-key">Your friends public key(key, exponent):</label>
+                  <div class="inline">
+                     <input type="text" name="friends-public-key_n" id="input-friend-public-key_n" placeholder="key" />
+                     <input type="text" name="friends-public-key_e" id="input-friend-public-key_e"
+                        placeholder="exponent" />
+                  </div>
                </div>
                <div class="center">
-                  <button>encrypt</button>
+                  <button id="encrypt-btn">encrypt</button>
                </div>
                <div class="form-group">
                   <label for="encrypted-message">Encrypted message:</label>
