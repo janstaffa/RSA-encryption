@@ -1,120 +1,197 @@
-import React, { useEffect, useRef } from 'react';
+import { BigInteger } from 'jsbn';
+import React, { useEffect, useRef, useState } from 'react';
+import { ClipLoader } from 'react-spinners';
 import {
-  gcd,
-  genRandomPrime,
-  hammingWeight,
-  lcm,
-  modularInverse,
-  randomInt,
-} from './functions';
+  decToHex,
+  genRandomPrimeBI,
+  hexToDec,
+  lcmBI,
+  numberToText,
+  padd,
+  textToNumber,
+  unpadd,
+} from './utils';
 
 export const App = () => {
-  const privateKeyDisplay = useRef<HTMLSpanElement>(null);
-  const publicKeyDisplayN = useRef<HTMLSpanElement>(null);
-  const publicKeyDisplayE = useRef<HTMLSpanElement>(null);
+  const privateExponentDisplay = useRef<HTMLTextAreaElement>(null);
+  const publicExponentDispay = useRef<HTMLTextAreaElement>(null);
+  const modulusDisplay = useRef<HTMLTextAreaElement>(null);
 
   const inputMessage = useRef<HTMLTextAreaElement>(null);
-  const inputFriendPublicKeyN = useRef<HTMLInputElement>(null);
-  const inputFriendPublicKeyE = useRef<HTMLInputElement>(null);
+  const inputFriendModulus = useRef<HTMLInputElement>(null);
+  const inputFriendPublicExponent = useRef<HTMLInputElement>(null);
 
   const outputEncryptedMessage = useRef<HTMLTextAreaElement>(null);
   const inputEncryptedMessage = useRef<HTMLTextAreaElement>(null);
   const outputDecryptedMessage = useRef<HTMLTextAreaElement>(null);
-  const encryptBtn = useRef<HTMLButtonElement>(null);
-  const decryptBtn = useRef<HTMLButtonElement>(null);
+
+  const [encrypting, setEncrypting] = useState<boolean>(false);
+  const [decrypting, setDecrypting] = useState<boolean>(false);
+  const [addPaddnig, setAddPadding] = useState<boolean>(true);
+  const addPaddingRef = useRef<boolean>(addPaddnig);
+  addPaddingRef.current = addPaddnig;
+  const [removePadding, setRemovePadding] = useState<boolean>(true);
+  const removePaddingRef = useRef<boolean>(removePadding);
+  removePaddingRef.current = removePadding;
+
+  const [showDecimalValues, setShowDecimalValues] = useState<boolean>(false);
+  const showDecimalValuesRef = useRef<boolean>(showDecimalValues);
+  showDecimalValuesRef.current = showDecimalValues;
+  const [pqLength, setPQLength] = useState<number>(100);
+  //key generation
+  const p = useRef<BigInteger>(BigInteger.ZERO);
+  const q = useRef<BigInteger>(BigInteger.ZERO);
+  const n = useRef<BigInteger>(BigInteger.ZERO);
+  const nLambda = useRef<BigInteger>(BigInteger.ZERO);
+  const e = useRef<BigInteger>(BigInteger.ZERO);
+  const d = useRef<BigInteger>(BigInteger.ZERO);
+
   useEffect(() => {
-    //key generation
-    const p = genRandomPrime(5);
-    const q = genRandomPrime(5);
-    const n = p * q;
-    console.log(p, q, n);
-    const nLambda = lcm(p > 1 ? p - 1 : 1, q > 1 ? q - 1 : 1);
-
-    const es: { n: number; bitLength: number; hammingWeight: number }[] = [];
-    for (let i = 0; i < 10; i++) {
-      let e: number;
-      do {
-        e = randomInt(2, nLambda - 1);
-      } while (gcd(e, nLambda) !== 1);
-      es.push({
-        n: e,
-        bitLength: Math.log2(e + 1),
-        hammingWeight: hammingWeight(e.toString()),
-      });
+    p.current = genRandomPrimeBI(pqLength);
+    q.current = genRandomPrimeBI(pqLength);
+    n.current = p.current.multiply(q.current);
+    nLambda.current = lcmBI(
+      p.current.compareTo(BigInteger.ONE) > 0
+        ? p.current.subtract(BigInteger.ONE)
+        : BigInteger.ONE,
+      q.current.compareTo(BigInteger.ONE) > 0
+        ? q.current.subtract(BigInteger.ONE)
+        : BigInteger.ONE
+    );
+    e.current = new BigInteger('2').pow(16).add(BigInteger.ONE);
+    d.current = e.current.modInverse(nLambda.current);
+  }, [pqLength]);
+  useEffect(() => {
+    if (privateExponentDisplay.current) {
+      privateExponentDisplay.current.innerHTML = showDecimalValuesRef.current
+        ? d.current.toString()
+        : d.current.toString(16);
     }
 
-    const sortedEs = es.sort((a, b) => {
-      if (a.bitLength + a.hammingWeight < b.bitLength + b.hammingWeight)
-        return -1;
-      if (a.bitLength + a.hammingWeight > b.bitLength + b.hammingWeight)
-        return 1;
-      return 0;
-    });
+    if (modulusDisplay.current && publicExponentDispay.current) {
+      modulusDisplay.current.innerHTML = showDecimalValuesRef.current
+        ? n.current.toString()
+        : n.current.toString(16);
+      publicExponentDispay.current.innerHTML = showDecimalValuesRef.current
+        ? e.current.toString()
+        : e.current.toString(16);
+    }
+  });
 
-    let e: number = sortedEs[0].n;
-
-    console.log('nLambda', nLambda);
-    const d = modularInverse(e, nLambda);
-    if (privateKeyDisplay.current) {
-      privateKeyDisplay.current.innerHTML = d.toString();
+  const handleEncrypt = async () => {
+    if (
+      !inputMessage.current ||
+      !inputFriendModulus.current ||
+      !inputFriendPublicExponent.current ||
+      !outputEncryptedMessage.current
+    ) {
+      alert('Something went wrong, please try again later.');
+      return;
     }
 
-    if (publicKeyDisplayN.current && publicKeyDisplayE.current) {
-      publicKeyDisplayN.current.innerHTML = n.toString();
-      publicKeyDisplayE.current.innerHTML = e.toString();
+    const message = inputMessage.current.value;
+    if (
+      !message ||
+      message.length === 0 ||
+      !inputFriendModulus.current.value ||
+      inputFriendModulus.current.value.length === 0 ||
+      !inputFriendPublicExponent.current.value ||
+      inputFriendPublicExponent.current.value.length === 0
+    )
+      return;
+    setEncrypting(true);
+    const friendsModulus = hexToDec(inputFriendModulus.current.value);
+    const friendsExponent = hexToDec(inputFriendPublicExponent.current.value);
+    const messageNumber = textToNumber(
+      addPaddingRef.current ? padd(message) : message
+    );
+    if (messageNumber.compareTo(friendsModulus) >= 0) {
+      alert(`This message is too long to encrypt.`);
+      setEncrypting(false);
+      return;
     }
-    console.log('d is:', d, Number.isSafeInteger(d));
+    const cipher = messageNumber.modPow(friendsExponent, friendsModulus);
+    setTimeout(() => {
+      outputEncryptedMessage.current!.innerHTML = decToHex(cipher);
+      setEncrypting(false);
+    }, 1000);
+  };
 
-    //  for (let i = 0; i < 100; i++) {
-    //    const n = i * randomInt(1, 500);
-    //    const [r1, r2] = [isPrimeBI(new BigInteger(n.toString())), isPrime(n)];
-    //    console.log(r1 !== r2 ? n + ' - ' + r1 + ', ' + r2 : r1 + ', ' + r2);
-    //  }
+  const handleDecrypt = () => {
+    setDecrypting(true);
+    if (!inputEncryptedMessage.current || !outputDecryptedMessage.current) {
+      alert('Something went wrong, please try again later.');
+      setDecrypting(false);
+      return;
+    }
+    const encryptedMessage = inputEncryptedMessage.current.value;
+    if (!encryptedMessage || encryptedMessage.length === 0) return;
+    const message = hexToDec(encryptedMessage).modPow(d.current, n.current);
+    setTimeout(() => {
+      const messageText = numberToText(message.toString());
+      const decryptedMessage = removePaddingRef.current
+        ? unpadd(messageText)
+        : messageText;
 
-    //  console.log('genRandomPrimeBI', genRandomPrimeBI(14).toString());
-  }, []);
+      outputDecryptedMessage.current!.innerHTML = decryptedMessage;
+      setDecrypting(false);
+    }, 1000);
+  };
 
-  // encryptBtn &&
-  //   encryptBtn.addEventListener('click', () => {
-  //     const message = inputMessage.value;
-  //     const friendsKey = inputFriendPublicKeyN.value;
-  //     const friendsExponent = inputFriendPublicKeyE.value;
-
-  //     //  const messageNumber = hexToDec(strToHex(message));
-  //     const messageNumber = parseInt(message);
-  //     //  console.log(strToHex(message));
-  //     const cipher =
-  //       Math.pow(messageNumber, parseInt(friendsExponent)) % parseInt(friendsKey);
-  //     console.log('cipher', cipher);
-  //     outputEncryptedMessage.value = cipher.toString();
-  //   });
-
-  // decryptBtn &&
-  //   decryptBtn.addEventListener('click', () => {
-  //     const encryptedMessage = inputEncryptedMessage.value;
-
-  //     console.log('decrypting...', encryptedMessage);
-  //     const message = Math.pow(parseInt(encryptedMessage), d) % n;
-  //     console.log(
-  //       'message...',
-  //       message,
-  //       Math.pow(parseInt(encryptedMessage), d),
-  //       d
-  //     );
-  //     outputDecryptedMessage.value = message.toString();
-  //   });
   return (
     <div className="App">
+      <img
+        src="/images/background.png"
+        alt="Background"
+        className="background"
+      />
       <div className="main">
         <h1>RSA encryption</h1>
         <hr />
         <div className="text-center text">
-          <b>Your private key:</b> <span ref={privateKeyDisplay}></span>
+          <div className="text padding-y">
+            <label>P and Q length(digits): </label>
+            <input
+              type="number"
+              value={pqLength}
+              min={5}
+              max={500}
+              onChange={(e) => setPQLength(parseInt(e.target.value))}
+            />
+          </div>
+          <div className="text padding-y">
+            <button onClick={() => setShowDecimalValues(!showDecimalValues)}>
+              Show {showDecimalValues ? 'hex' : 'decimal'} values
+            </button>
+          </div>
+          <p>
+            <b>Your private exponent:</b>
+          </p>
+          <textarea
+            ref={privateExponentDisplay}
+            className="key-view"
+            readOnly={true}
+          ></textarea>
         </div>
         <div className="text-center text">
-          <b>Your public key(key, exponent):</b> (
-          <span ref={publicKeyDisplayN}></span>,{' '}
-          <span ref={publicKeyDisplayE}></span>)
+          <p>
+            <b>Your public exponent:</b>
+          </p>
+          <textarea
+            ref={publicExponentDispay}
+            className="key-view"
+            readOnly={true}
+          ></textarea>
+        </div>
+        <div className="text-center text">
+          <p>
+            <b>Modulus:</b>
+          </p>
+          <textarea
+            ref={modulusDisplay}
+            className="key-view"
+            readOnly={true}
+          ></textarea>
         </div>
         <hr />
         <div className="wraper">
@@ -123,36 +200,44 @@ export const App = () => {
               <h3>Encrypt:</h3>
               <div className="form-group">
                 <label htmlFor="message">Message:</label>
-                <textarea name="message" ref={inputMessage} rows={8}></textarea>
+                <textarea name="message" ref={inputMessage} rows={6}></textarea>
               </div>
               <div className="form-group">
-                <label htmlFor="friends-public-key">
-                  Your friends public key(key, exponent):
-                </label>
-                <div className="inline">
-                  <input
-                    type="text"
-                    name="friends-public-key_n"
-                    ref={inputFriendPublicKeyN}
-                    placeholder="key"
-                  />
-                  <input
-                    type="text"
-                    name="friends-public-key_e"
-                    ref={inputFriendPublicKeyE}
-                    placeholder="exponent"
-                  />
-                </div>
+                <label>Friends modulus(hex):</label>
+                <input
+                  type="text"
+                  ref={inputFriendModulus}
+                  placeholder="modulus"
+                />
+                <label>Friends public exponent(hex):</label>
+                <input
+                  type="text"
+                  ref={inputFriendPublicExponent}
+                  placeholder="public exponent"
+                />
               </div>
               <div className="center">
-                <button ref={encryptBtn}>encrypt</button>
+                <div className="text padding-y">
+                  <label htmlFor="add-padding-checkbox">Add padding: </label>
+                  <input
+                    type="checkbox"
+                    name="add-padding-checkbox"
+                    checked={addPaddnig}
+                    onChange={() => setAddPadding(!addPaddnig)}
+                  />
+                </div>
+                <button onClick={handleEncrypt}>
+                  {encrypting && <ClipLoader size={10} />} encrypt
+                </button>
               </div>
               <div className="form-group">
-                <label htmlFor="encrypted-message">Encrypted message:</label>
+                <label htmlFor="encrypted-message">
+                  Encrypted message(hex):
+                </label>
                 <textarea
                   name="encrypted-message"
                   ref={outputEncryptedMessage}
-                  rows={8}
+                  rows={6}
                   readOnly={true}
                 ></textarea>
               </div>
@@ -162,22 +247,36 @@ export const App = () => {
             <div className="inner-wrapper">
               <h3>Decrypt:</h3>
               <div className="form-group">
-                <label htmlFor="message">Encrypted message:</label>
+                <label htmlFor="message">Encrypted message(hex):</label>
                 <textarea
                   name="message"
                   ref={inputEncryptedMessage}
-                  rows={8}
+                  rows={6}
                 ></textarea>
               </div>
               <div className="center">
-                <button ref={decryptBtn}>decrypt</button>
+                <div className="text padding-y">
+                  <label htmlFor="remove-padding-checkbox">
+                    Remove padding:
+                  </label>
+                  <input
+                    type="checkbox"
+                    name="remove-padding-checkbox"
+                    checked={removePadding}
+                    onChange={() => setRemovePadding(!removePadding)}
+                  />
+                </div>
+                <button onClick={handleDecrypt} className="btn">
+                  {decrypting && <ClipLoader size={10} />}
+                  decrypt
+                </button>
               </div>
               <div className="form-group">
                 <label htmlFor="encrypted-message">Decrypted message:</label>
                 <textarea
                   name="encrypted-message"
                   ref={outputDecryptedMessage}
-                  rows={8}
+                  rows={6}
                   readOnly={true}
                 ></textarea>
               </div>
